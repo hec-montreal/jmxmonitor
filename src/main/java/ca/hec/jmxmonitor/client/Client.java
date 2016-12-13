@@ -12,13 +12,13 @@ import javax.management.remote.JMXServiceURL;
 
 import ca.hec.jmxmonitor.exception.MonitorException;
 
-public class ClientImpl implements ca.hec.jmxmonitor.api.Client
+public class Client
 {
 	private String url;
 	private JMXConnector jmxConnector;
 	private MBeanServerConnection mbeanServerConnection;
 
-	public ClientImpl(String host, String port)
+	public Client(String host, String port)
 	{
 		this.url = "service:jmx:rmi:///jndi/rmi://" + host + ":" + port + "/jmxrmi";
 	}
@@ -54,7 +54,7 @@ public class ClientImpl implements ca.hec.jmxmonitor.api.Client
 		}
 	}
 
-	public String[] getMBeanDomains() throws MonitorException
+	public String[] getDomains() throws MonitorException
 	{
 		try
 		{
@@ -66,7 +66,7 @@ public class ClientImpl implements ca.hec.jmxmonitor.api.Client
 		}
 	}
 
-	public Set<ObjectName> getAllMBeanNames() throws MonitorException
+	public Set<ObjectName> getAllBeanNames() throws MonitorException
 	{
 		try
 		{
@@ -78,11 +78,11 @@ public class ClientImpl implements ca.hec.jmxmonitor.api.Client
 		}
 	}
 
-	public Set<ObjectName> findMBeanNames(String name) throws MonitorException
+	public Set<ObjectName> searchBeanNames(String name) throws MonitorException
 	{
 		Set<ObjectName> ret = new HashSet<ObjectName>();
 
-		for (ObjectName on : getAllMBeanNames())
+		for (ObjectName on : getAllBeanNames())
 		{
 			if (on.getCanonicalName().toLowerCase().contains(name))
 			{
@@ -93,9 +93,9 @@ public class ClientImpl implements ca.hec.jmxmonitor.api.Client
 		return ret;
 	}
 
-	public ObjectName findMBeanName(String name) throws MonitorException
+	public ObjectName findBeanName(String name) throws MonitorException
 	{
-		for (ObjectName on : getAllMBeanNames())
+		for (ObjectName on : getAllBeanNames())
 		{
 			if (on.getCanonicalName().toLowerCase().contains(name))
 			{
@@ -106,9 +106,9 @@ public class ClientImpl implements ca.hec.jmxmonitor.api.Client
 		throw new MonitorException("Cannot find MBean named " + name);
 	}
 
-	public boolean hasMBean(String name) throws MonitorException
+	public boolean hasBean(String name) throws MonitorException
 	{
-		for (ObjectName on : getAllMBeanNames())
+		for (ObjectName on : getAllBeanNames())
 		{
 			if (on.equals(name))
 			{
@@ -119,7 +119,7 @@ public class ClientImpl implements ca.hec.jmxmonitor.api.Client
 		return false;
 	}
 
-	public MBeanInfo getMBeanInfo(ObjectName name) throws MonitorException
+	public MBeanInfo getBeanInfo(ObjectName name) throws MonitorException
 	{
 		try
 		{
@@ -138,6 +138,20 @@ public class ClientImpl implements ca.hec.jmxmonitor.api.Client
 			return mbeanServerConnection.getAttribute(name, attributeName);
 		}
 		catch (Exception e)
+		{
+			throw new MonitorException(e);
+		}
+	}
+
+	public Integer getAttributeInt(ObjectName name, String attributeName) throws MonitorException
+	{
+		Object ret = getAttribute(name, attributeName);
+
+		try
+		{
+			return (Integer) ret;
+		}
+		catch (ClassCastException e)
 		{
 			throw new MonitorException(e);
 		}

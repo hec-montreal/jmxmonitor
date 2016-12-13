@@ -1,112 +1,100 @@
 package ca.hec.jmxmonitor;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Timer;
+import java.util.TimerTask;
 
-import ca.hec.jmxmonitor.api.Client;
-import ca.hec.jmxmonitor.client.ClientImpl;
+import javax.management.ObjectName;
+
+import ca.hec.jmxmonitor.client.Client;
 import ca.hec.jmxmonitor.exception.MonitorException;
+import ca.hec.jmxmonitor.log.Log;
 
 public class App
 {
-	private SimpleDateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SS");
 	private Client client;
+	private Log log;
+
 	private Timer timer;
 	private long frequency;
-	private String logPath;
-	private BufferedWriter writer;
 
-	private App(String[] args)
+	private App(String[] args) throws MonitorException
 	{
 		if (args.length < 4)
 		{
-			System.out.println("Usage: monitor [host] [port] [frequency] [logPath]");
-
-			System.exit(0);
+			die("Usage: monitor [host] [port] [frequency] [logPath]");
 		}
 
 		String host = args[0];
 		String port = args[1];
+		String logFilename = args[3];
 
 		frequency = Long.parseLong(args[2]);
-		logPath = args[3];
 
-		log("Monitoring Hikari on " + host + ":" + port + " (frequency=" + frequency + "ms)");
+		client = new Client(host, port);
 
-		client = new ClientImpl("localhost", "6433");
+		log = new Log(logFilename);
+		log.info("Monitoring Hikari on " + host + ":" + port + " (frequency=" + frequency + "ms, logfile='" + logFilename + "')");
 	}
 
-	void run() throws MonitorException
+	private void run() throws MonitorException
 	{
-		try
-		{
-			writer = new BufferedWriter(new FileWriter(logPath, true));
-		}
-		catch (IOException e)
-		{
-			throw new MonitorException("Invalid log path: " + logPath);
-		}
-
 		client.open();
 
 		timer = new Timer();
-		timer.schedule(new HikariMonitorTask(this), 0, frequency);
+
+		timer.schedule(new TimerTask()
+		{
+			@Override
+			public void run()
+			{
+				try
+				{
+					HikariStateSnapshot snapshot = takeHikariStateSnapshot();
+
+					log.info(snapshot.toString());
+				}
+				catch (MonitorException e)
+				{
+					log.error(e);
+				}
+			}
+		}, 0, frequency);
 	}
 
-	public void stop()
+	private HikariStateSnapshot takeHikariStateSnapshot() throws MonitorException
+	{
+		HikariStateSnapshot ret = new HikariStateSnapshot();
+		ObjectName hikariObjectName = client.findBeanName("com.zaxxer.hikari:type=pool ");
+
+		ret.setActiveConnections(client.getAttributeInt(hikariObjectName, "ActiveConnections"));
+		ret.setIdleConnections(client.getAttributeInt(hikariObjectName, "IdleConnections"));
+		ret.setThreadsAwaitingConnection(client.getAttributeInt(hikariObjectName, "ThreadsAwaitingConnection"));
+		ret.setTotalConnections(client.getAttributeInt(hikariObjectName, "TotalConnections"));
+
+		return ret;
+	}
+
+	private static void die(String msg)
+	{
+		System.out.println(msg);
+
+		System.exit(0);
+	}
+
+	private static void die(Exception e)
+	{
+		die(e.getMessage());
+	}
+
+	public static void main(String[] args)
 	{
 		try
 		{
-			writer.close();
-		}
-		catch (IOException e)
-		{
-
-		}
-
-		try
-		{
-			client.close();
+			new App(args).run();
 		}
 		catch (MonitorException e)
 		{
-			e.printStackTrace();
+			die(e);
 		}
-
-		timer.cancel();
-	}
-
-	public Client getClient()
-	{
-		return client;
-	}
-
-	public void log(String info)
-	{
-		String line = "[" + LOG_DATE_FORMAT.format(new Date()) + "]   " + info;
-
-		if (writer != null)
-		{
-			try
-			{
-				writer.write(line + "\n");
-				writer.flush();
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
-		}
-
-		System.out.println(line);
-	}
-
-	public static void main(String[] args) throws MonitorException
-	{
-		new App(args).run();
 	}
 }
