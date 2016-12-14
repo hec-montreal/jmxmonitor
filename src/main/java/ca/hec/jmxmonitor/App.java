@@ -11,6 +11,8 @@ import ca.hec.jmxmonitor.log.Log;
 
 public class App
 {
+	private String[] args;
+
 	private Client client;
 	private Log log;
 
@@ -19,20 +21,50 @@ public class App
 
 	private App(String[] args) throws MonitorException
 	{
-		if (args.length < 4)
+		this.args = args;
+
+		String host = arg(0);
+
+		if (host == null || host.length() == 0)
 		{
-			die("Usage: monitor [host] [port] [frequency] [logPath]");
+			System.out.println("Host not specified, using localhost");
+
+			host = "localhost";
 		}
 
-		String host = args[0];
-		String port = args[1];
-		String logFilename = args[3];
+		String port = arg(1);
 
-		frequency = Long.parseLong(args[2]);
+		if (port == null || port.length() == 0)
+		{
+			System.out.println("Port not specified, using 6433");
+
+			port = "6433";
+		}
+
+		try
+		{
+			frequency = Long.parseLong(arg(2));
+		}
+		catch (Exception e)
+		{
+			System.out.println("Frequency not specified, using 500ms");
+
+			frequency = 500;
+		}
+
+		String logFilename = arg(3);
+
+		if (logFilename == null || logFilename.length() == 0)
+		{
+			System.out.println("Log file not specified, using ./jmxmonitor.log");
+
+			logFilename = "./jmxmonitor.log";
+		}
 
 		client = new Client(host, port);
 
 		log = new Log(logFilename);
+
 		log.info("Monitoring Hikari on " + host + ":" + port + " (frequency=" + frequency + "ms, logfile='" + logFilename + "')");
 	}
 
@@ -84,6 +116,16 @@ public class App
 	private static void die(Exception e)
 	{
 		die(e.getMessage());
+	}
+
+	private String arg(int index)
+	{
+		if (index < args.length)
+		{
+			return args[index];
+		}
+
+		return null;
 	}
 
 	public static void main(String[] args)

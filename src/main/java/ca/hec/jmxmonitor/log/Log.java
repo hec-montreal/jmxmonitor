@@ -5,17 +5,21 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 import ca.hec.jmxmonitor.exception.MonitorException;
 
 public class Log
 {
-	private SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS");
+	private SimpleDateFormat dateFormat;
 	private String filename;
 	private BufferedWriter writer;
 
 	public Log(String filename) throws MonitorException
 	{
+		dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS");
+		dateFormat.setTimeZone(TimeZone.getTimeZone("America/New_York"));
+
 		this.filename = filename;
 
 		try
@@ -30,7 +34,7 @@ public class Log
 
 	public void info(String info) throws MonitorException
 	{
-		String line = "[" + DATE_FORMAT.format(new Date()) + "]   " + info;
+		String line = "[" + dateFormat.format(new Date()) + "]   " + info;
 
 		System.out.println(line);
 
