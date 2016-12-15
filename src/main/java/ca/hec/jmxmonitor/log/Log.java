@@ -1,76 +1,43 @@
 package ca.hec.jmxmonitor.log;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
+import org.apache.log4j.DailyRollingFileAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 import ca.hec.jmxmonitor.exception.MonitorException;
 
 public class Log
 {
-	private SimpleDateFormat dateFormat;
-	private String filename;
-	private BufferedWriter writer;
-
 	public Log(String filename) throws MonitorException
 	{
-		dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS");
-		dateFormat.setTimeZone(TimeZone.getTimeZone("America/New_York"));
-
-		this.filename = filename;
-
 		try
 		{
-			this.writer = new BufferedWriter(new FileWriter(filename, true));
+			PatternLayout layout = new PatternLayout("%d{yyyy-MM-dd HH:mm:ss.SSS} %m %n");
+			DailyRollingFileAppender appender = new DailyRollingFileAppender(layout, filename, "'.'yyyy-MM-dd");
+			appender.setName("jmxmonitor");
+			appender.setAppend(true);
+			appender.activateOptions();
+
+			Logger.getRootLogger().addAppender(appender);
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			throw new MonitorException("Cannot open log file " + filename);
+			throw new MonitorException(e);
 		}
 	}
 
-	public void info(String info) throws MonitorException
+	public void info(String message)
 	{
-		String line = "[" + dateFormat.format(new Date()) + "]   " + info;
-
-		System.out.println(line);
-
-		try
-		{
-			writer.write(line + "\n");
-			writer.flush();
-		}
-		catch (IOException e)
-		{
-			throw new MonitorException("Cannot write to log file " + filename);
-		}
+		Logger.getRootLogger().info(message);
 	}
 
-	public void error(MonitorException e)
+	public void error(String message)
 	{
-		try
-		{
-			info("MonitorException: " + e.getMessage());
-		}
-		catch (MonitorException e2)
-		{
-			System.out.println(e.getMessage());
-			System.out.println(e2.getMessage());
-		}
+		Logger.getRootLogger().error(message);
 	}
 
-	public void close() throws MonitorException
+	public void error(Exception e)
 	{
-		try
-		{
-			this.writer.close();
-		}
-		catch (IOException e)
-		{
-			throw new MonitorException("Cannot close log file " + filename);
-		}
+		Logger.getRootLogger().error(e.getMessage());
 	}
 }
