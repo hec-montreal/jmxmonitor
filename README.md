@@ -20,4 +20,4 @@ Exemple des logs :
 frequency = fréquence des messages loggé en ms
 
 ## tips
-J'ai du rajouté `-Djava.net.preferIPv4Stack=true` à `tomcat/bin/setenv.sh` pour que ça marche sur mon poste, sinnon la connexion échoue.
+J'ai du rajouté `-Djava.net.preferIPv4Stack=true` à `tomcat/bin/setenv.sh` pour que ça marche sur mon poste, sinon la connexion échoue.
